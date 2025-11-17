@@ -1,35 +1,68 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import {
+  useEffect,
+  useState,
+  type FunctionComponent,
+  type PropsWithChildren,
+} from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { ClipLoader } from 'react-spinners';
+
+import type { User } from './components/employeeCard/employeeCard.comp';
+import { EmployeeList } from './components/employeeList/employeeList.comp';
+import fetchUsers from './utils/users.api';
+import ConcatUserFilterCallback from './utils/users.utils';
+
+import './App.css';
+
+const CenteredDiv: FunctionComponent<PropsWithChildren<unknown>> = ({
+  children,
+}) => (
+  <div className="flex items-center justify-center h-screen bg-gray-100">
+    {children}
+  </div>
+);
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [employees, setEmployees] = useState<User[]>([]);
+  const [filterString, setFilterString] = useState<string>('');
+
+  const { data, isLoading, error, isError } = useQuery({
+    queryKey: ['users'],
+    queryFn: fetchUsers,
+  });
+
+  useEffect(() => {
+    if (data) {
+      const filteredEmployees =
+        filterString.length > 0
+          ? data.users.filter(ConcatUserFilterCallback(filterString))
+          : data.users;
+
+      setEmployees(filteredEmployees);
+    }
+  }, [data, filterString]);
+
+  if (isLoading) {
+    return (
+      <CenteredDiv>
+        <ClipLoader size={42} />
+      </CenteredDiv>
+    );
+  }
+
+  if (isError) {
+    return (
+      <CenteredDiv>
+        Error: {error instanceof Error ? error.message : 'Unknown error'}
+      </CenteredDiv>
+    );
+  }
 
   return (
     <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
+      <EmployeeList employees={employees} setFilter={setFilterString} />
     </>
-  )
+  );
 }
 
-export default App
+export default App;
